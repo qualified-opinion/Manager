@@ -89,7 +89,7 @@ class VaultClipboardTest {
         runCurrent()
         viewModel.copyToClipboard(application, "secret")
         clipboard.setPrimaryClip(ClipData.newPlainText("Other app", "replacement"))
-        shadowOf(Looper.getMainLooper()).idleFor(Duration.ofSeconds(30))
+        shadowOf(Looper.getMainLooper()).idleFor(Duration.ofSeconds(10))
         assertEquals("replacement", clipboard.primaryClip?.getItemAt(0)?.text?.toString())
     }
 
@@ -100,21 +100,21 @@ class VaultClipboardTest {
         viewModel.onAppBackgrounded()
         runCurrent()
         assertEquals("secret", clipboard.primaryClip?.getItemAt(0)?.text?.toString())
-        shadowOf(Looper.getMainLooper()).idleFor(Duration.ofSeconds(30))
+        shadowOf(Looper.getMainLooper()).idleFor(Duration.ofSeconds(10))
         assertNotEquals("secret", clipboard.primaryClip?.getItemAt(0)?.text?.toString())
     }
 
     @Test
-    fun `timeout clears latest copy after thirty seconds`() = runTest {
+    fun `timeout clears latest copy after ten seconds`() = runTest {
         runCurrent()
         viewModel.copyToClipboard(application, "first")
         val firstMarker = clipboard.primaryClipDescription?.label?.toString()
-        shadowOf(Looper.getMainLooper()).idleFor(Duration.ofSeconds(15))
+        shadowOf(Looper.getMainLooper()).idleFor(Duration.ofSeconds(5))
         viewModel.copyToClipboard(application, "second")
         assertNotEquals(firstMarker, clipboard.primaryClipDescription?.label?.toString())
-        shadowOf(Looper.getMainLooper()).idleFor(Duration.ofSeconds(15))
+        shadowOf(Looper.getMainLooper()).idleFor(Duration.ofSeconds(5))
         assertEquals("second", clipboard.primaryClip?.getItemAt(0)?.text?.toString())
-        shadowOf(Looper.getMainLooper()).idleFor(Duration.ofSeconds(15))
+        shadowOf(Looper.getMainLooper()).idleFor(Duration.ofSeconds(5))
         assertNotEquals("second", clipboard.primaryClip?.getItemAt(0)?.text?.toString())
     }
 }

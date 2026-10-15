@@ -218,6 +218,7 @@ fun PasswordGeneratorContent(
                             contentColor = MaterialTheme.colorScheme.onSurface
                         ),
                         shape = RoundedCornerShape(12.dp),
+                        enabled = uiState.currentGeneratedPassword.isNotEmpty(),
                         modifier = Modifier
                             .weight(1f)
                             .testTag("gen_copy_btn")
@@ -391,6 +392,7 @@ fun PasswordGeneratorContent(
             Spacer(modifier = Modifier.height(20.dp))
             Button(
                 onClick = { onUsePassword(uiState.currentGeneratedPassword) },
+                enabled = uiState.currentGeneratedPassword.isNotEmpty(),
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(50.dp)

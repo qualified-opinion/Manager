@@ -479,7 +479,8 @@ fun AddEditEntryScreen(
                 PasswordGeneratorContent(
                     viewModel = viewModel,
                     onUsePassword = { generated ->
-                        password = generated
+                        // Never replace the entry's password with an empty generator value.
+                        if (generated.isNotEmpty()) password = generated
                         showGeneratorSheet = false
                     },
                     onClose = { showGeneratorSheet = false }
