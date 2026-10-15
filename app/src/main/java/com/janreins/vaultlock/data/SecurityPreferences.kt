@@ -66,6 +66,9 @@ class SecurityPreferences(context: Context, customPrefs: SharedPreferences? = nu
         private const val KEY_VERIFIER = "key_auth_verifier"
         private const val KEY_PENDING_SALT = "key_pending_master_salt"
         private const val KEY_PENDING_VERIFIER = "key_pending_auth_verifier"
+        // Absent on vaults created before the count was stored: those use LEGACY_ITERATION_COUNT.
+        private const val KEY_KDF_ITERATIONS = "key_kdf_iterations"
+        private const val KEY_PENDING_KDF_ITERATIONS = "key_pending_kdf_iterations"
         private const val KEY_BIOMETRIC_ENABLED = "key_biometric_enabled"
         private const val KEY_WRAPPED_KEY = "key_wrapped_master_key"
         private const val KEY_AUTO_LOCK_SECONDS = "key_auto_lock_seconds"
@@ -90,7 +93,8 @@ class SecurityPreferences(context: Context, customPrefs: SharedPreferences? = nu
     data class PreparedMasterPassword(
         val secretKey: SecretKey,
         val saltBase64: String,
-        val verifierEncrypted: String
+        val verifierEncrypted: String,
+        val iterations: Int = CryptoManager.ITERATION_COUNT
     )
 
     /**
@@ -99,10 +103,11 @@ class SecurityPreferences(context: Context, customPrefs: SharedPreferences? = nu
      */
     fun prepareMasterPasswordChange(password: CharArray): PreparedMasterPassword {
         val salt = CryptoManager.generateSalt()
-        val derivedKey = CryptoManager.deriveKey(password, salt)
+        val iterations = CryptoManager.ITERATION_COUNT
+        val derivedKey = CryptoManager.deriveKey(password, salt, iterations)
         val verifierEncrypted = CryptoManager.encrypt(VERIFIER_MAGIC, derivedKey)
         val saltBase64 = Base64.encodeToString(salt, Base64.NO_WRAP)
-        return PreparedMasterPassword(derivedKey, saltBase64, verifierEncrypted)
+        return PreparedMasterPassword(derivedKey, saltBase64, verifierEncrypted, iterations)
     }
 
     /**
@@ -113,16 +118,19 @@ class SecurityPreferences(context: Context, customPrefs: SharedPreferences? = nu
             .putBoolean(KEY_IS_SETUP, true)
             .putString(KEY_SALT, prepared.saltBase64)
             .putString(KEY_VERIFIER, prepared.verifierEncrypted)
+            .putInt(KEY_KDF_ITERATIONS, prepared.iterations)
             .remove(KEY_PENDING_SALT)
             .remove(KEY_PENDING_VERIFIER)
+            .remove(KEY_PENDING_KDF_ITERATIONS)
             .putLong(KEY_AUTO_LOCK_SECONDS, prefs.getLong(KEY_AUTO_LOCK_SECONDS, 120L))
             .commit()
     }
 
     /**
      * Initializes the Master Password for the first time or updates it immediately.
-     * Generates a unique 32-byte salt, derives the Master Key via PBKDF2 (150,000 iterations),
-     * and stores the encrypted magic verification token in EncryptedSharedPreferences.
+     * Generates a unique 32-byte salt, derives the Master Key via PBKDF2 ([CryptoManager.ITERATION_COUNT]
+     * iterations), and stores the iteration count and encrypted magic verification token in
+     * EncryptedSharedPreferences.
      */
     fun setupMasterPassword(password: CharArray): SecretKey {
         val prepared = prepareMasterPasswordChange(password)
@@ -137,17 +145,18 @@ class SecurityPreferences(context: Context, customPrefs: SharedPreferences? = nu
      * Returns the derived SecretKey if valid, or null if incorrect.
      */
     fun verifyAndDeriveKey(password: CharArray): SecretKey? {
-        return verifyAndDeriveKey(password, KEY_SALT, KEY_VERIFIER)
+        return verifyAndDeriveKey(password, KEY_SALT, KEY_VERIFIER, KEY_KDF_ITERATIONS)
     }
 
     fun verifyPendingAndDeriveKey(password: CharArray): SecretKey? {
-        return verifyAndDeriveKey(password, KEY_PENDING_SALT, KEY_PENDING_VERIFIER)
+        return verifyAndDeriveKey(password, KEY_PENDING_SALT, KEY_PENDING_VERIFIER, KEY_PENDING_KDF_ITERATIONS)
     }
 
     fun stagePendingMasterPasswordChange(prepared: PreparedMasterPassword): Boolean {
         return prefs.edit()
             .putString(KEY_PENDING_SALT, prepared.saltBase64)
             .putString(KEY_PENDING_VERIFIER, prepared.verifierEncrypted)
+            .putInt(KEY_PENDING_KDF_ITERATIONS, prepared.iterations)
             .commit()
     }
 
@@ -156,18 +165,23 @@ class SecurityPreferences(context: Context, customPrefs: SharedPreferences? = nu
     }
 
     fun clearPendingMasterPasswordChange(): Boolean {
-        return prefs.edit().remove(KEY_PENDING_SALT).remove(KEY_PENDING_VERIFIER).commit()
+        return prefs.edit().remove(KEY_PENDING_SALT).remove(KEY_PENDING_VERIFIER)
+            .remove(KEY_PENDING_KDF_ITERATIONS).commit()
     }
 
     fun promotePendingMasterPasswordChange(): Boolean {
         val salt = prefs.getString(KEY_PENDING_SALT, null) ?: return false
         val verifier = prefs.getString(KEY_PENDING_VERIFIER, null) ?: return false
+        // A journal staged by an older build has no count; it was derived with the legacy count.
+        val iterations = prefs.getInt(KEY_PENDING_KDF_ITERATIONS, CryptoManager.LEGACY_ITERATION_COUNT)
         return prefs.edit()
             .putBoolean(KEY_IS_SETUP, true)
             .putString(KEY_SALT, salt)
             .putString(KEY_VERIFIER, verifier)
+            .putInt(KEY_KDF_ITERATIONS, iterations)
             .remove(KEY_PENDING_SALT)
             .remove(KEY_PENDING_VERIFIER)
+            .remove(KEY_PENDING_KDF_ITERATIONS)
             .commit()
     }
 
@@ -181,12 +195,23 @@ class SecurityPreferences(context: Context, customPrefs: SharedPreferences? = nu
         }
     }
 
-    private fun verifyAndDeriveKey(password: CharArray, saltKey: String, verifierKey: String): SecretKey? {
+    /** Iteration count stored with the current credentials; vaults from older builds use the legacy count. */
+    val kdfIterations: Int
+        get() = prefs.getInt(KEY_KDF_ITERATIONS, CryptoManager.LEGACY_ITERATION_COUNT)
+
+    private fun verifyAndDeriveKey(
+        password: CharArray,
+        saltKey: String,
+        verifierKey: String,
+        iterationsKey: String
+    ): SecretKey? {
         val saltBase64 = prefs.getString(saltKey, null) ?: return null
         val verifierEncrypted = prefs.getString(verifierKey, null) ?: return null
+        val iterations = prefs.getInt(iterationsKey, CryptoManager.LEGACY_ITERATION_COUNT)
+        if (iterations !in CryptoManager.ACCEPTED_ITERATION_RANGE) return null
 
         val salt = Base64.decode(saltBase64, Base64.NO_WRAP)
-        val derivedKey = CryptoManager.deriveKey(password, salt)
+        val derivedKey = CryptoManager.deriveKey(password, salt, iterations)
 
         return try {
             val decrypted = CryptoManager.decrypt(verifierEncrypted, derivedKey)

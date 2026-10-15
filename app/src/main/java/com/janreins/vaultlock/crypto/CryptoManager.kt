@@ -11,14 +11,20 @@ import javax.crypto.spec.SecretKeySpec
 
 /**
  * High-security offline cryptographic manager.
- * - Key derivation: PBKDF2WithHmacSHA256 with 150,000 iterations & 256-bit key length.
+ * - Key derivation: PBKDF2WithHmacSHA256, 256-bit key; 600,000 iterations for new master passwords
+ *   (vaults set up before the count was stored use 150,000 until their next password change).
  * - Data encryption: AES-256-GCM with unique 12-byte IV for every encryption operation.
  * - Zero network activity, 100% offline on-device cryptography.
  */
 object CryptoManager {
     private const val PBKDF2_ALGORITHM = "PBKDF2WithHmacSHA256"
     private const val AES_GCM_CIPHER = "AES/GCM/NoPadding"
-    private const val ITERATION_COUNT = 150_000
+    /** Work factor for new vaults and every master password change. */
+    const val ITERATION_COUNT = 600_000
+    /** Work factor of vaults whose stored credentials predate a per-vault iteration count. */
+    const val LEGACY_ITERATION_COUNT = 150_000
+    /** Stored counts outside this range are rejected instead of derived. */
+    val ACCEPTED_ITERATION_RANGE = LEGACY_ITERATION_COUNT..2_000_000
     private const val KEY_LENGTH_BITS = 256
     private const val GCM_IV_LENGTH_BYTES = 12
     private const val GCM_TAG_LENGTH_BITS = 128
@@ -37,11 +43,11 @@ object CryptoManager {
 
     /**
      * Derives a 256-bit AES SecretKey from the user's Master Password and a salt
-     * using PBKDF2 with 150,000 iterations. Zeroizes the password character buffer in memory
-     * and clears temporary key byte arrays after building the SecretKeySpec.
+     * using PBKDF2 with [iterations] rounds. Clears PBEKeySpec's internal copy of the password
+     * and temporary key byte arrays after building the SecretKeySpec; the caller's array is not filled.
      */
-    fun deriveKey(masterPassword: CharArray, salt: ByteArray): SecretKey {
-        val spec = PBEKeySpec(masterPassword, salt, ITERATION_COUNT, KEY_LENGTH_BITS)
+    fun deriveKey(masterPassword: CharArray, salt: ByteArray, iterations: Int = ITERATION_COUNT): SecretKey {
+        val spec = PBEKeySpec(masterPassword, salt, iterations, KEY_LENGTH_BITS)
         return try {
             val factory = SecretKeyFactory.getInstance(PBKDF2_ALGORITHM)
             val pbeKey = factory.generateSecret(spec)

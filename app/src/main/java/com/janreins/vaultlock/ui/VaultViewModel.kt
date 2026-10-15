@@ -349,11 +349,16 @@ class VaultViewModel @JvmOverloads constructor(
                                 throw IllegalStateException("Failed to finish pending master password change. Please retry with your NEW master password.")
                             }
                             key = pendingKey
-                        } else if (pendingKey != null) {
-                            if (!securityPreferences.clearPendingMasterPasswordChange()) {
-                                throw IllegalStateException("Failed to clear pending master password change. Please retry.")
-                            }
+                        } else if (pendingKey != null && currentKey == null) {
+                            // Keep the journal: only the previous password decrypting a row proves it is
+                            // safe to drop the new credentials.
                             val msg = "The master password change did not complete. Unlock with your PREVIOUS master password."
+                            _uiState.update { it.copy(errorMessage = msg) }
+                            onResult(false, msg)
+                            return@launch
+                        } else if (pendingKey != null) {
+                            // Same password text under both salts, and neither key decrypts any row.
+                            val msg = "Your vault entries could not be decrypted with this password. Nothing was changed; keep your backup safe and try again."
                             _uiState.update { it.copy(errorMessage = msg) }
                             onResult(false, msg)
                             return@launch
