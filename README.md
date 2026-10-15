@@ -24,7 +24,7 @@ VaultLock uses local encryption to protect credentials stored on-device:
 - **Encrypted Exports:** Save an encrypted file directly through Android's document picker. Imports are limited to 16 MiB and add entries to the current vault.
 - **Biometric Authentication:** Hardware-backed fingerprint / face unlock.
 - **Auto-Lock Timer:** Automatic locking on inactivity or app backgrounding.
-- **Clipboard Masking:** Sensitive clip data flags (Android 13+) with clipboard clearing after 30 seconds and on vault lock, while preserving clips copied by other apps.
+- **Clipboard Masking:** Sensitive clip data flags (Android 13+) with clipboard clearing after 10 seconds and on vault lock, while preserving clips copied by other apps.
 
 ---
 

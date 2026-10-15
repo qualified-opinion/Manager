@@ -82,6 +82,19 @@ class LockLifecycleTest {
     }
 
     @Test
+    fun `generator has a fresh password after lock and unlock`() = vmTest {
+        runCurrent()
+        assertTrue(viewModel.uiState.value.currentGeneratedPassword.isNotEmpty())
+        viewModel.lockVault()
+        runCurrent()
+        assertEquals("", viewModel.uiState.value.currentGeneratedPassword)
+        SessionManager.setKey(SecretKeySpec(ByteArray(32) { 1 }, "AES"))
+        runCurrent()
+        assertTrue(viewModel.uiState.value.isUnlocked)
+        assertTrue(viewModel.uiState.value.currentGeneratedPassword.isNotEmpty())
+    }
+
+    @Test
     fun `normal stop always locks for timeout 120`() = vmTest {
         runCurrent()
         viewModel.setAutoLockDuration(120)

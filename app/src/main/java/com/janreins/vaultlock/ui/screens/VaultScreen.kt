@@ -324,19 +324,19 @@ fun VaultScreen(
                             onCopyUsername = {
                                 viewModel.copyToClipboard(context, entry.username, "Username")
                                 coroutineScope.launch {
-                                    snackbarHostState.showSnackbar("Username copied (clears in 30s)")
+                                    snackbarHostState.showSnackbar("Username copied (clears in 10s)")
                                 }
                             },
                             onCopyPassword = {
                                 viewModel.copyToClipboard(context, entry.password, "Password")
                                 coroutineScope.launch {
-                                    snackbarHostState.showSnackbar("Password copied (clears in 30s)")
+                                    snackbarHostState.showSnackbar("Password copied (clears in 10s)")
                                 }
                             },
                             onCopyTotp = { code ->
                                 viewModel.copyToClipboard(context, code, "TOTP Code")
                                 coroutineScope.launch {
-                                    snackbarHostState.showSnackbar("TOTP code copied (clears in 30s)")
+                                    snackbarHostState.showSnackbar("TOTP code copied (clears in 10s)")
                                 }
                             },
                             onToggleFavorite = { viewModel.toggleFavorite(entry) },

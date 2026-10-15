@@ -93,6 +93,7 @@ class VaultViewModel @JvmOverloads constructor(
     companion object {
         const val CONFIG_CHANGE_GRACE_MS = 5_000L
         const val PENDING_IMPORT_TTL_MS = 600_000L
+        const val CLIPBOARD_CLEAR_MS = 10_000L
     }
 
     private val entryDrafts = mutableMapOf<String, EntryDraft>()
@@ -123,7 +124,7 @@ class VaultViewModel @JvmOverloads constructor(
                     clearEntryDrafts()
                     discardUnlaunchedExport()
                 }
-                _uiState.update { if (unlocked) it.copy(isUnlocked = true) else it.clearedForLock() }
+                _uiState.update { if (unlocked) it.withFreshGeneratedPassword().copy(isUnlocked = true) else it.clearedForLock() }
                 if (unlocked) {
                     startInactivityTimer()
                 } else {
@@ -274,7 +275,7 @@ class VaultViewModel @JvmOverloads constructor(
                 _uiState.update { it.copy(isMasterPasswordSet = true) }
                 check(SessionManager.setKeyIfCurrent(derivedKey, sessionGeneration)) { "Setup completed. Unlock to continue." }
                 _uiState.update {
-                    it.copy(
+                    it.withFreshGeneratedPassword().copy(
                         isMasterPasswordSet = true,
                         isUnlocked = true
                     )
@@ -367,7 +368,7 @@ class VaultViewModel @JvmOverloads constructor(
                 if (key != null) {
                     securityPreferences.resetFailedUnlockAttempts()
                     check(SessionManager.setKeyIfCurrent(key, sessionGeneration)) { "Unlock cancelled because the app was locked." }
-                    _uiState.update { it.copy(isUnlocked = true, errorMessage = null, lockoutRemainingSeconds = 0) }
+                    _uiState.update { it.withFreshGeneratedPassword().copy(isUnlocked = true, errorMessage = null, lockoutRemainingSeconds = 0) }
                     onResult(true, "Vault Unlocked")
                 } else {
                     val delaySeconds = securityPreferences.recordFailedUnlockAttempt()
@@ -428,7 +429,7 @@ class VaultViewModel @JvmOverloads constructor(
                 } else {
                     securityPreferences.resetFailedUnlockAttempts()
                     if (!SessionManager.setKeyIfCurrent(secretKey, sessionGeneration)) return@promptBiometricUnlock
-                    _uiState.update { it.copy(isUnlocked = true, errorMessage = null, lockoutRemainingSeconds = 0) }
+                    _uiState.update { it.withFreshGeneratedPassword().copy(isUnlocked = true, errorMessage = null, lockoutRemainingSeconds = 0) }
                     onResult(true, "Unlocked via Biometrics")
                 }
             },
@@ -696,13 +697,17 @@ class VaultViewModel @JvmOverloads constructor(
         }
     }
 
+    /** Locking blanks the generated password; give the generator a new one once the vault is open again. */
+    private fun VaultUiState.withFreshGeneratedPassword(): VaultUiState =
+        if (currentGeneratedPassword.isEmpty()) copy(currentGeneratedPassword = PasswordGenerator.generate(generatorOptions)) else this
+
     fun regeneratePassword() {
         val newPassword = PasswordGenerator.generate(_uiState.value.generatorOptions)
         _uiState.update { it.copy(currentGeneratedPassword = newPassword) }
     }
 
     /**
-     * Copies sensitive text to clipboard with sensitive masking flag and 30s auto-clear.
+     * Copies sensitive text to clipboard with sensitive masking flag and 10s auto-clear.
      */
     fun copyToClipboard(context: Context, text: String, label: String = "VaultLock Data") {
         try {
@@ -730,7 +735,7 @@ class VaultViewModel @JvmOverloads constructor(
             _uiState.update { it.copy(activeCopiedLabel = label) }
             val runnable = Runnable { clearOwnedClipboard() }
             clipboardClearRunnable = runnable
-            clipboardClearHandler.postDelayed(runnable, 30_000)
+            clipboardClearHandler.postDelayed(runnable, CLIPBOARD_CLEAR_MS)
 
             // Reset label animation in UI after 2.5 seconds.
             viewModelScope.launch {

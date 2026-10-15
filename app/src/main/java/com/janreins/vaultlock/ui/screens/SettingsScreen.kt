@@ -531,6 +531,7 @@ fun ChangeMasterPasswordDialog(
                     },
                     label = { Text("Current Password") },
                     visualTransformation = if (showPasswords) VisualTransformation.None else PasswordVisualTransformation(),
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth()
                 )
@@ -545,6 +546,7 @@ fun ChangeMasterPasswordDialog(
                     },
                     label = { Text("New Password") },
                     visualTransformation = if (showPasswords) VisualTransformation.None else PasswordVisualTransformation(),
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth()
                 )
@@ -559,6 +561,7 @@ fun ChangeMasterPasswordDialog(
                     },
                     label = { Text("Confirm New Password") },
                     visualTransformation = if (showPasswords) VisualTransformation.None else PasswordVisualTransformation(),
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth()
                 )
