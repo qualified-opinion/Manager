@@ -741,6 +741,8 @@ class VaultViewModel @JvmOverloads constructor(
             val runnable = Runnable { clearOwnedClipboard() }
             clipboardClearRunnable = runnable
             clipboardClearHandler.postDelayed(runnable, CLIPBOARD_CLEAR_MS)
+            // Survives process death; the handler above cancels it in the normal case.
+            ClipboardWipe.schedule(context, marker, CLIPBOARD_CLEAR_MS)
 
             // Reset label animation in UI after 2.5 seconds.
             viewModelScope.launch {
@@ -764,6 +766,11 @@ class VaultViewModel @JvmOverloads constructor(
     private fun clearOwnedClipboard() {
         clipboardClearRunnable?.let { clipboardClearHandler.removeCallbacks(it) }
         clipboardClearRunnable = null
+        try {
+            ClipboardWipe.cancel(getApplication())
+        } catch (_: Exception) {
+            // A leftover alarm only clears a clip that is still ours.
+        }
         try {
             val clipboard = ownedClipboard
             val marker = ownedClipLabel

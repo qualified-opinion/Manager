@@ -166,10 +166,8 @@ object BiometricHelper {
                         }
                     }
 
-                    override fun onAuthenticationFailed() {
-                        super.onAuthenticationFailed()
-                        onError("Biometric verification failed. Try again.")
-                    }
+                    // onAuthenticationFailed (one unrecognised finger or face) is not terminal: the prompt
+                    // stays open and shows its own retry hint, and onAuthenticationError reports the end.
                 }
             )
 
@@ -268,10 +266,8 @@ object BiometricHelper {
                         }
                     }
 
-                    override fun onAuthenticationFailed() {
-                        super.onAuthenticationFailed()
-                        onError("Biometric verification failed. Try again.")
-                    }
+                    // onAuthenticationFailed (one unrecognised finger or face) is not terminal: the prompt
+                    // stays open and shows its own retry hint, and onAuthenticationError reports the end.
                 }
             )
 

@@ -26,6 +26,10 @@
             </intent-filter>
         </activity>
 
+        <receiver
+            android:name=".ui.ClipboardClearReceiver"
+            android:exported="false" />
+
     </application>
 
 </manifest>
