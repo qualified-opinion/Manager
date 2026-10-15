@@ -115,9 +115,13 @@ class BackupPickerFlowTest {
             .set(viewModel, bytes)
     }
 
-    /** Pump Main while real IO finishes; never advance the repeating inactivity timer. */
+    /**
+     * Pump Main while real IO finishes; never advance the repeating inactivity timer.
+     * The deadline is generous because shared CI runners can be slow and busy with PBKDF2 work from
+     * earlier tests; it only costs time when a test is genuinely stuck.
+     */
     private suspend fun TestScope.awaitState(condition: () -> Boolean) {
-        val deadline = System.nanoTime() + 15_000_000_000L
+        val deadline = System.nanoTime() + 60_000_000_000L
         while (true) {
             runCurrent()
             if (condition()) return
