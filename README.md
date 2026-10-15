@@ -8,7 +8,7 @@ VaultLock is a privacy-first, fully offline personal password manager for Androi
 
 VaultLock uses local encryption to protect credentials stored on-device:
 
-- **Key Derivation (PBKDF2):** Master Key derived using `PBKDF2WithHmacSHA256` with **150,000 iterations** and a 256-bit key length.
+- **Key Derivation (PBKDF2):** Master Key derived using `PBKDF2WithHmacSHA256` with **600,000 iterations** and a 256-bit key length. The count is stored with each vault's credentials; vaults set up by earlier builds keep 150,000 until their next master password change, which upgrades them to 600,000.
 - **AES-256-GCM Encryption:** Sensitive fields (titles, usernames, passwords, notes, TOTP secrets) are individually encrypted with `AES/GCM/NoPadding` using a cryptographically secure random 12-byte IV for every write operation.
 - **Biometric Unlock:** Android `BiometricPrompt` with Hardware KeyStore wrapping to securely preserve and retrieve the master session key without compromising security. Biometric re-enrollment is required when device biometric settings change or keystore credentials are invalidated.
 - **Unlock Throttling & Rate Limiting:** Consecutive failed master-password attempts trigger exponential backoff delays (1s, 2s, 4s, 8s, 16s, 32s, capped at 60s) persisted in `EncryptedSharedPreferences` to mitigate brute-force attacks.

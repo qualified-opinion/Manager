@@ -170,10 +170,38 @@ class MasterPasswordRecoveryTest {
         assertFalse(newResult.first)
         assertEquals("The master password change did not complete. Unlock with your PREVIOUS master password.", newResult.second)
         assertFalse(SessionManager.hasKey())
-        assertFalse(preferences.hasPendingMasterPasswordChange())
+        // The journal is dropped only once the previous password proves it still decrypts the vault.
+        assertTrue(preferences.hasPendingMasterPasswordChange())
         assertEquals(0, preferences.getFailedUnlockAttempts())
         assertTrue(unlock(model, oldPassword).first)
+        assertFalse(preferences.hasPendingMasterPasswordChange())
         assertEquals("secret", repository.getEntryById(id)?.password)
+        model.lockVault()
+        runCurrent()
+    }
+
+    @Test
+    fun `damaged first row does not strand an interrupted change`() = runTest(dispatcher) {
+        seedVault()
+        repository.saveEntry(VaultEntry(title = "Bank", username = "bob", password = "second-secret"))
+        val prepared = preferences.prepareMasterPasswordChange(newPassword.toCharArray())
+        assertTrue(preferences.stagePendingMasterPasswordChange(prepared))
+        repository.reEncryptAll(SessionManager.getKey(), prepared.secretKey)
+        SessionManager.lock()
+        // Favourites sort first, so the damaged row is the first one any probe reads.
+        val dao = database.vaultDao()
+        val damaged = dao.getAllEntriesSync().last()
+        dao.updateEntry(damaged.copy(isFavorite = true, encryptedPassword = "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"))
+        assertEquals(damaged.id, dao.getAllEntriesSync().first().id)
+        val model = VaultViewModel(application, preferences, dispatcher)
+
+        assertFalse(unlock(model, oldPassword).first)
+        assertTrue(preferences.hasPendingMasterPasswordChange())
+        assertTrue(unlock(model, newPassword).first)
+        assertFalse(preferences.hasPendingMasterPasswordChange())
+        assertNotNull(preferences.verifyAndDeriveKey(newPassword.toCharArray()))
+        val intact = dao.getAllEntriesSync().first { it.id != damaged.id }
+        assertTrue(repository.getEntryById(intact.id)?.password in setOf("secret", "second-secret"))
         model.lockVault()
         runCurrent()
     }
@@ -336,6 +364,10 @@ class MasterPasswordRecoveryTest {
                 }
                 override fun putLong(key: String?, value: Long): SharedPreferences.Editor {
                     editor.putLong(key, value)
+                    return this
+                }
+                override fun putInt(key: String?, value: Int): SharedPreferences.Editor {
+                    editor.putInt(key, value)
                     return this
                 }
                 override fun remove(key: String?): SharedPreferences.Editor {

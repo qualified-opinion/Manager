@@ -73,14 +73,21 @@ class VaultRepository(
         vaultDao.deleteEntryById(id)
     }
 
-    /** A batch rotation leaves every row under the same key; one strict read identifies it. */
+    /**
+     * Whether [key] strictly decrypts at least one row: null for an empty vault. A batch rotation leaves
+     * every row under one key, so a single row is positive evidence; one damaged row is not taken as
+     * evidence against the key.
+     */
     suspend fun keyDecryptsVault(key: SecretKey): Boolean? = withContext(Dispatchers.IO) {
-        val first = vaultDao.getAllEntriesSync().firstOrNull() ?: return@withContext null
-        try {
-            first.toDomainStrict(key)
-            true
-        } catch (_: VaultDecryptionException) {
-            false
+        val entities = vaultDao.getAllEntriesSync()
+        if (entities.isEmpty()) return@withContext null
+        entities.any { entity ->
+            try {
+                entity.toDomainStrict(key)
+                true
+            } catch (_: VaultDecryptionException) {
+                false
+            }
         }
     }
 
