@@ -71,8 +71,10 @@ class VaultClipboardTest {
         runCurrent()
         viewModel.copyToClipboard(application, "secret")
         assertEquals("secret", clipboard.primaryClip?.getItemAt(0)?.text?.toString())
+        // Set on every version, not just API 33+ where the constant was added.
+        assertTrue(clipboard.primaryClipDescription?.extras?.getBoolean(VaultViewModel.EXTRA_IS_SENSITIVE) == true)
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            assertTrue(clipboard.primaryClipDescription?.extras?.getBoolean(ClipDescription.EXTRA_IS_SENSITIVE) == true)
+            assertEquals(ClipDescription.EXTRA_IS_SENSITIVE, VaultViewModel.EXTRA_IS_SENSITIVE)
         }
         viewModel.lockVault()
         assertNotEquals("secret", clipboard.primaryClip?.getItemAt(0)?.text?.toString())
