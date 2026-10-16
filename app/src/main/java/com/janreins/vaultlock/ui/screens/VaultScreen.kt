@@ -82,6 +82,7 @@ import com.janreins.vaultlock.crypto.TotpHelper
 import com.janreins.vaultlock.data.VaultEntry
 import com.janreins.vaultlock.ui.VaultUiState
 import com.janreins.vaultlock.ui.VaultViewModel
+import com.janreins.vaultlock.ui.groupTotpCode
 import com.janreins.vaultlock.ui.theme.Amber400
 import com.janreins.vaultlock.ui.theme.Amber500
 import com.janreins.vaultlock.ui.theme.BlueInfo
@@ -508,7 +509,7 @@ fun VaultEntryCard(
                     if (entry.totpSecret.isNotBlank() && totpCode != null) {
                         Spacer(modifier = Modifier.height(2.dp))
                         Text(
-                            text = "2FA: ${totpCode?.take(3)} ${totpCode?.drop(3)} (${totpRemainingSeconds}s)",
+                            text = "2FA: ${totpCode?.let(::groupTotpCode)} (${totpRemainingSeconds}s)",
                             style = MaterialTheme.typography.labelSmall.copy(
                                 fontFamily = FontFamily.Monospace,
                                 fontWeight = FontWeight.Bold
@@ -580,7 +581,7 @@ fun VaultEntryCard(
                                     )
                                     Row(verticalAlignment = Alignment.CenterVertically) {
                                         Text(
-                                            text = "${totpCode?.take(3)} ${totpCode?.drop(3)}",
+                                            text = "${totpCode?.let(::groupTotpCode)}",
                                             style = MaterialTheme.typography.titleMedium.copy(
                                                 fontFamily = FontFamily.Monospace,
                                                 fontWeight = FontWeight.Bold
