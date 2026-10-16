@@ -144,7 +144,13 @@ object BiometricHelper {
                         }
                         try {
                             val iv = authenticatedCipher.iv
-                            val encryptedKeyBytes = authenticatedCipher.doFinal(masterKeyToWrap.encoded)
+                            // encoded returns a fresh copy of the key; zero it once wrapped.
+                            val keyBytes = masterKeyToWrap.encoded
+                            val encryptedKeyBytes = try {
+                                authenticatedCipher.doFinal(keyBytes)
+                            } finally {
+                                keyBytes.fill(0)
+                            }
                             val combined = ByteArray(iv.size + encryptedKeyBytes.size)
                             System.arraycopy(iv, 0, combined, 0, iv.size)
                             System.arraycopy(encryptedKeyBytes, 0, combined, iv.size, encryptedKeyBytes.size)

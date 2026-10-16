@@ -76,6 +76,34 @@ class UnlockThrottlingTest {
     }
 
     @Test
+    fun `lockout runs on the uptime clock and restarts in full after a reboot`() {
+        var uptime = 50_000L
+        var boot = 7
+        val prefs = application.getSharedPreferences("test_throttling_clock", Context.MODE_PRIVATE)
+        prefs.edit().clear().commit()
+        val clocked = SecurityPreferences(application, prefs, elapsedRealtime = { uptime }, bootCount = { boot })
+
+        clocked.recordFailedUnlockAttempt()
+        assertEquals(2L, clocked.recordFailedUnlockAttempt())
+        assertEquals(2_000L, clocked.getLockoutRemainingMillis())
+        uptime += 500
+        assertEquals(1_500L, clocked.getLockoutRemainingMillis())
+
+        // A restart: new boot count, uptime starts again near zero. The whole delay applies again.
+        boot = 8
+        uptime = 1_000L
+        assertEquals(2_000L, clocked.getLockoutRemainingMillis())
+        uptime += 2_000
+        assertEquals(0L, clocked.getLockoutRemainingMillis())
+
+        // Unknown boot count: uptime going backwards still counts as a restart.
+        clocked.recordFailedUnlockAttempt()
+        boot = -1
+        uptime -= 500
+        assertEquals(4_000L, clocked.getLockoutRemainingMillis())
+    }
+
+    @Test
     fun `resetFailedUnlockAttempts clears failure counter and lockout timestamp`() {
         securityPreferences.recordFailedUnlockAttempt()
         securityPreferences.recordFailedUnlockAttempt()
