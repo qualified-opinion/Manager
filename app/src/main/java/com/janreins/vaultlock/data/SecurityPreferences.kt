@@ -2,6 +2,8 @@ package com.janreins.vaultlock.data
 
 import android.content.Context
 import android.content.SharedPreferences
+import android.os.SystemClock
+import android.provider.Settings
 import android.util.Base64
 import androidx.security.crypto.EncryptedSharedPreferences
 import androidx.security.crypto.MasterKey
@@ -12,7 +14,14 @@ import javax.crypto.SecretKey
  * Security preferences stored in Android Keystore backed EncryptedSharedPreferences.
  * Stores encryption salt, authentication verifier token, wrapped master keys, and app flags.
  */
-class SecurityPreferences(context: Context, customPrefs: SharedPreferences? = null) {
+class SecurityPreferences(
+    context: Context,
+    customPrefs: SharedPreferences? = null,
+    // Lockouts are timed on the uptime clock, which the user can't change, and tagged with the boot
+    // count so a restart (which resets uptime) is detected. Injectable for tests.
+    private val elapsedRealtime: () -> Long = SystemClock::elapsedRealtime,
+    private val bootCount: () -> Int = { readBootCount(context) }
+) {
 
     private val prefs: SharedPreferences = customPrefs ?: run {
         val masterKey = MasterKey.Builder(context.applicationContext)
@@ -74,7 +83,18 @@ class SecurityPreferences(context: Context, customPrefs: SharedPreferences? = nu
         private const val KEY_AUTO_LOCK_SECONDS = "key_auto_lock_seconds"
         private const val KEY_THEME_MODE = "key_theme_mode" // "system", "dark", "light"
         private const val KEY_FAILED_ATTEMPTS = "key_failed_attempts"
-        private const val KEY_LOCKOUT_UNTIL = "key_lockout_until"
+        /** Wall-clock deadline from older builds; read nowhere, removed on the next write. */
+        private const val KEY_LEGACY_LOCKOUT_UNTIL = "key_lockout_until"
+        private const val KEY_LOCKOUT_STARTED_ELAPSED = "key_lockout_started_elapsed"
+        private const val KEY_LOCKOUT_DELAY_MS = "key_lockout_delay_ms"
+        private const val KEY_LOCKOUT_BOOT_COUNT = "key_lockout_boot_count"
+        private const val UNKNOWN_BOOT_COUNT = -1
+
+        private fun readBootCount(context: Context): Int = try {
+            Settings.Global.getInt(context.applicationContext.contentResolver, Settings.Global.BOOT_COUNT, UNKNOWN_BOOT_COUNT)
+        } catch (_: Exception) {
+            UNKNOWN_BOOT_COUNT
+        }
         private const val VERIFIER_MAGIC = "VAULTLOCK_VERIFY_PAYLOAD_V1"
     }
 
@@ -263,12 +283,27 @@ class SecurityPreferences(context: Context, customPrefs: SharedPreferences? = nu
 
     fun getFailedUnlockAttempts(): Int = prefs.getInt(KEY_FAILED_ATTEMPTS, 0)
 
-    fun getLockoutUntil(): Long = prefs.getLong(KEY_LOCKOUT_UNTIL, 0L)
-
+    /**
+     * Time left on the current lockout. Changing the phone's clock has no effect. After a restart
+     * the uptime clock starts again from zero, so the full delay is applied again from now.
+     */
     fun getLockoutRemainingMillis(): Long {
-        val lockoutUntil = prefs.getLong(KEY_LOCKOUT_UNTIL, 0L)
-        val remaining = lockoutUntil - System.currentTimeMillis()
-        return if (remaining > 0) remaining else 0L
+        val delayMs = prefs.getLong(KEY_LOCKOUT_DELAY_MS, 0L)
+        if (delayMs <= 0L) return 0L
+        val startedAt = prefs.getLong(KEY_LOCKOUT_STARTED_ELAPSED, 0L)
+        val storedBoot = prefs.getInt(KEY_LOCKOUT_BOOT_COUNT, UNKNOWN_BOOT_COUNT)
+        val now = elapsedRealtime()
+        val currentBoot = bootCount()
+        val rebooted = now < startedAt ||
+            (storedBoot != UNKNOWN_BOOT_COUNT && currentBoot != UNKNOWN_BOOT_COUNT && storedBoot != currentBoot)
+        if (rebooted) {
+            prefs.edit()
+                .putLong(KEY_LOCKOUT_STARTED_ELAPSED, now)
+                .putInt(KEY_LOCKOUT_BOOT_COUNT, currentBoot)
+                .commit()
+            return delayMs
+        }
+        return (startedAt + delayMs - now).coerceIn(0L, delayMs)
     }
 
     fun calculateBackoffDelaySeconds(attempts: Int): Long {
@@ -281,12 +316,16 @@ class SecurityPreferences(context: Context, customPrefs: SharedPreferences? = nu
     fun recordFailedUnlockAttempt(): Long {
         val currentAttempts = prefs.getInt(KEY_FAILED_ATTEMPTS, 0) + 1
         val delaySeconds = calculateBackoffDelaySeconds(currentAttempts)
-        val lockoutUntil = System.currentTimeMillis() + delaySeconds * 1000L
 
+        // commit(), not apply(): the counter must be on disk before the result is shown, or killing
+        // the app right after a wrong guess would skip the delay.
         prefs.edit()
             .putInt(KEY_FAILED_ATTEMPTS, currentAttempts)
-            .putLong(KEY_LOCKOUT_UNTIL, lockoutUntil)
-            .apply()
+            .putLong(KEY_LOCKOUT_STARTED_ELAPSED, elapsedRealtime())
+            .putLong(KEY_LOCKOUT_DELAY_MS, delaySeconds * 1000L)
+            .putInt(KEY_LOCKOUT_BOOT_COUNT, bootCount())
+            .remove(KEY_LEGACY_LOCKOUT_UNTIL)
+            .commit()
 
         return delaySeconds
     }
@@ -294,7 +333,10 @@ class SecurityPreferences(context: Context, customPrefs: SharedPreferences? = nu
     fun resetFailedUnlockAttempts() {
         prefs.edit()
             .remove(KEY_FAILED_ATTEMPTS)
-            .remove(KEY_LOCKOUT_UNTIL)
+            .remove(KEY_LOCKOUT_STARTED_ELAPSED)
+            .remove(KEY_LOCKOUT_DELAY_MS)
+            .remove(KEY_LOCKOUT_BOOT_COUNT)
+            .remove(KEY_LEGACY_LOCKOUT_UNTIL)
             .apply()
     }
 

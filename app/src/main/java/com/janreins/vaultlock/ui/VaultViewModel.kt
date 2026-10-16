@@ -272,7 +272,7 @@ class VaultViewModel @JvmOverloads constructor(
         val sessionGeneration = SessionManager.generation()
         viewModelScope.launch {
             try {
-                val derivedKey = withContext(kdfDispatcher) { securityPreferences.setupMasterPassword(password.toCharArray()) }
+                val derivedKey = withContext(kdfDispatcher) { password.withChars { securityPreferences.setupMasterPassword(it) } }
                 _uiState.update { it.copy(isMasterPasswordSet = true) }
                 check(SessionManager.setKeyIfCurrent(derivedKey, sessionGeneration)) { "Setup completed. Unlock to continue." }
                 _uiState.update {
@@ -333,7 +333,7 @@ class VaultViewModel @JvmOverloads constructor(
         val sessionGeneration = SessionManager.generation()
         viewModelScope.launch {
             try {
-                var key = withContext(kdfDispatcher) { securityPreferences.verifyAndDeriveKey(password.toCharArray()) }
+                var key = withContext(kdfDispatcher) { password.withChars { securityPreferences.verifyAndDeriveKey(it) } }
                 if (securityPreferences.hasPendingMasterPasswordChange()) {
                     // Recover an interrupted master password change. Rows are re-encrypted in a single
                     // transaction, so the key that decrypts the vault tells which credentials are live.
@@ -344,7 +344,7 @@ class VaultViewModel @JvmOverloads constructor(
                         }
                     } else {
                         // Also covers a change to the same password text (new salt, new key).
-                        val pendingKey = withContext(kdfDispatcher) { securityPreferences.verifyPendingAndDeriveKey(password.toCharArray()) }
+                        val pendingKey = withContext(kdfDispatcher) { password.withChars { securityPreferences.verifyPendingAndDeriveKey(it) } }
                         if (pendingKey != null && repository.keyDecryptsVault(pendingKey) != false) {
                             if (!securityPreferences.promotePendingMasterPasswordChange()) {
                                 throw IllegalStateException("Failed to finish pending master password change. Please retry with your NEW master password.")
@@ -448,11 +448,12 @@ class VaultViewModel @JvmOverloads constructor(
     }
 
     /**
-     * Explicitly locks the vault session and wipes key material from memory.
+     * Explicitly locks the vault session: drops the session key (best effort; Android can't
+     * guarantee key bytes are erased from memory), drafts and pending backups.
      */
     fun lockVault(clearClipboard: Boolean = true) {
         // Backgrounding must not wipe a just-copied secret before the user can paste it elsewhere;
-        // the 30-second timer still clears it in that case.
+        // the 10-second timer still clears it in that case.
         if (clearClipboard) clearOwnedClipboard()
         configChangeGuardJob?.cancel()
         SessionManager.lock()
@@ -580,7 +581,7 @@ class VaultViewModel @JvmOverloads constructor(
                     return@launch
                 }
 
-                val oldKey = withContext(kdfDispatcher) { securityPreferences.verifyAndDeriveKey(currentPass.toCharArray()) }
+                val oldKey = withContext(kdfDispatcher) { currentPass.withChars { securityPreferences.verifyAndDeriveKey(it) } }
                 if (oldKey == null) {
                     val delaySeconds = securityPreferences.recordFailedUnlockAttempt()
                     val msg = "Current password is incorrect. Try again in $delaySeconds second(s)."
@@ -591,7 +592,7 @@ class VaultViewModel @JvmOverloads constructor(
                 }
                 securityPreferences.resetFailedUnlockAttempts()
 
-                val prepared = withContext(kdfDispatcher) { securityPreferences.prepareMasterPasswordChange(newPass.toCharArray()) }
+                val prepared = withContext(kdfDispatcher) { newPass.withChars { securityPreferences.prepareMasterPasswordChange(it) } }
                 // Check after derivation too: another rotation may have staged while it ran.
                 if (securityPreferences.hasPendingMasterPasswordChange()) {
                     onResult(false, "Unlock with your master password to finish the interrupted change before changing it again.")
@@ -1051,5 +1052,19 @@ class VaultViewModel @JvmOverloads constructor(
                 _uiState.update { it.copy(userMessage = "Wipe failed: ${e.localizedMessage}") }
             }
         }
+    }
+}
+
+/**
+ * Hands the KDF a temporary char copy of [this] and fills it with zeros afterwards. The String
+ * itself (from the Compose text field) can't be wiped, so this only shortens how long extra
+ * copies stay in memory.
+ */
+private inline fun <T> String.withChars(block: (CharArray) -> T): T {
+    val chars = toCharArray()
+    try {
+        return block(chars)
+    } finally {
+        chars.fill('\u0000')
     }
 }
