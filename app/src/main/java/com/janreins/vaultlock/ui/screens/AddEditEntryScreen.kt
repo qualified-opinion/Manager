@@ -224,6 +224,7 @@ fun AddEditEntryScreen(
                     OutlinedTextField(
                         value = title,
                         onValueChange = {
+                            viewModel.onUserActivity()
                             title = it
                             titleError = false
                         },
@@ -250,7 +251,7 @@ fun AddEditEntryScreen(
                     // Username / Email Field
                     OutlinedTextField(
                         value = username,
-                        onValueChange = { username = it },
+                        onValueChange = { viewModel.onUserActivity(); username = it },
                         label = { Text("Username / Email / User ID") },
                         leadingIcon = {
                             Icon(Icons.Default.Person, null, tint = Amber400)
@@ -270,7 +271,7 @@ fun AddEditEntryScreen(
                     // Password Field with Generator button and visibility toggle
                     OutlinedTextField(
                         value = password,
-                        onValueChange = { password = it },
+                        onValueChange = { viewModel.onUserActivity(); password = it },
                         label = { Text("Password / PIN") },
                         leadingIcon = {
                             Icon(Icons.Default.Lock, null, tint = Amber400)
@@ -340,6 +341,7 @@ fun AddEditEntryScreen(
                     OutlinedTextField(
                         value = totpSecret,
                         onValueChange = {
+                            viewModel.onUserActivity()
                             totpSecret = it
                             totpError = false
                         },
@@ -359,7 +361,7 @@ fun AddEditEntryScreen(
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password, autoCorrect = false),
                         isError = totpError,
                         supportingText = {
-                            Text(if (totpError) "Enter a valid Base32 secret (A–Z, 2–7)." else "Raw secret only; SHA-1, 6 digits, 30 seconds.")
+                            Text(if (totpError) "Enter a valid secret key (letters A–Z, digits 2–7) or otpauth:// link." else "Paste the secret key or an otpauth:// link. A plain key uses SHA-1, 6 digits, 30 seconds.")
                         },
                         singleLine = true,
                         colors = OutlinedTextFieldDefaults.colors(
@@ -376,7 +378,7 @@ fun AddEditEntryScreen(
                     // Website URL Field
                     OutlinedTextField(
                         value = url,
-                        onValueChange = { url = it },
+                        onValueChange = { viewModel.onUserActivity(); url = it },
                         label = { Text("Website Address (Optional)") },
                         leadingIcon = {
                             Icon(Icons.Default.Language, null, tint = Amber400)
@@ -397,7 +399,7 @@ fun AddEditEntryScreen(
                     // Notes / Extra Details Field
                     OutlinedTextField(
                         value = notes,
-                        onValueChange = { notes = it },
+                        onValueChange = { viewModel.onUserActivity(); notes = it },
                         label = { Text("Encrypted Notes / Security Questions") },
                         leadingIcon = {
                             Icon(Icons.Default.Description, null, tint = Amber400)
