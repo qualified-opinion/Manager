@@ -84,6 +84,11 @@ Missing credentials fail the release job; it never substitutes a debug signature
 copy of the production signing key and increment `versionCode` for every production update.
 Do not generate a replacement key for an existing production installation.
 
+For sideload testing, open **Actions → Android CI → Run workflow** and select **main**.
+Download the `vaultlock-signed-release` artifact: it contains a signed APK and SHA-256 checksum,
+retained for 7 days; this manual path does not create a tag or GitHub Release.
+Debug APKs from v1.0.0 cannot be updated in place by signed v1.1.0+ APKs; export a backup first.
+
 ### Build Release APK
 ```bash
 ./gradlew assembleRelease
