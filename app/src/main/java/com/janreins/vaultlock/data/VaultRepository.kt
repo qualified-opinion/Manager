@@ -3,6 +3,7 @@ package com.janreins.vaultlock.data
 import com.janreins.vaultlock.crypto.BackupEnvelope
 import com.janreins.vaultlock.crypto.CryptoManager
 import com.janreins.vaultlock.crypto.SessionManager
+import com.janreins.vaultlock.ui.EntryValidation
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.flow.Flow
@@ -15,6 +16,9 @@ import javax.crypto.SecretKey
 
 class VaultDecryptionException(entryId: Long, cause: Exception) :
     IllegalStateException("Cannot decrypt vault entry $entryId. Original data has been preserved.", cause)
+
+/** Starts the note line that keeps an imported 2FA secret the editor can't read. */
+const val INVALID_TOTP_NOTE_PREFIX = "2FA secret from backup (not recognised): "
 
 class VaultRepository(
     private val vaultDao: VaultDao,
@@ -184,7 +188,7 @@ class VaultRepository(
                     url = field("url"), notes = field("notes"), totpSecret = field("totpSecret"),
                     category = field("category"), isFavorite = obj.getBoolean("isFavorite"),
                     createdAt = obj.getLong("createdAt"), updatedAt = obj.getLong("updatedAt")
-                )
+                ).withEditableTotpSecret()
                 validateBackupEntry(entry)
                 if (!skipDuplicates || existing.add(entry.identity())) {
                     restored.add(entry.toEntity(key).copy(updatedAt = entry.updatedAt))
@@ -197,6 +201,17 @@ class VaultRepository(
             decryptedBytes.fill(0)
             password.fill('\u0000')
         }
+    }
+
+    /**
+     * The editor refuses to save an entry whose 2FA secret it can't read, so an imported entry with
+     * such a secret could never be edited again. Keep the original text in the notes instead of
+     * dropping it, and leave the 2FA field empty.
+     */
+    private fun VaultEntry.withEditableTotpSecret(): VaultEntry {
+        if (EntryValidation.isValidTotpSecret(totpSecret)) return this
+        val kept = "$INVALID_TOTP_NOTE_PREFIX${totpSecret.trim()}"
+        return copy(totpSecret = "", notes = if (notes.isBlank()) kept else "${notes.trimEnd()}\n\n$kept")
     }
 
     private fun validateBackupEntry(entry: VaultEntry) {

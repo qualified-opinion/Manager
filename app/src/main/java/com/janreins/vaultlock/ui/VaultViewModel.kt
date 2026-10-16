@@ -2,7 +2,6 @@ package com.janreins.vaultlock.ui
 
 import android.app.Application
 import android.content.ClipData
-import android.content.ClipDescription
 import android.content.ClipboardManager
 import android.content.Context
 import android.net.Uri
@@ -94,6 +93,8 @@ class VaultViewModel @JvmOverloads constructor(
         const val CONFIG_CHANGE_GRACE_MS = 5_000L
         const val PENDING_IMPORT_TTL_MS = 600_000L
         const val CLIPBOARD_CLEAR_MS = 10_000L
+        /** Value of ClipDescription.EXTRA_IS_SENSITIVE, which only exists as a constant from API 33. */
+        const val EXTRA_IS_SENSITIVE = "android.content.extra.IS_SENSITIVE"
     }
 
     private val entryDrafts = mutableMapOf<String, EntryDraft>()
@@ -720,10 +721,10 @@ class VaultViewModel @JvmOverloads constructor(
             // A fresh marker identifies this copy without retaining or comparing its plaintext.
             val marker = "VaultLock:${UUID.randomUUID()}"
             val clip = ClipData.newPlainText(marker, text)
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                clip.description.extras = PersistableBundle().apply {
-                    putBoolean(ClipDescription.EXTRA_IS_SENSITIVE, true)
-                }
+            // The constant is only named in API 33, but keyboards and clipboard previews on older
+            // versions read the same key, so set it on every version.
+            clip.description.extras = PersistableBundle().apply {
+                putBoolean(EXTRA_IS_SENSITIVE, true)
             }
             clipboard.setPrimaryClip(clip)
             clipboardClearRunnable?.let { clipboardClearHandler.removeCallbacks(it) }

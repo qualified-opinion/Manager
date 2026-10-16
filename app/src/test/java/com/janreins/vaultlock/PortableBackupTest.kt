@@ -68,6 +68,29 @@ class PortableBackupTest {
         assertEquals(before, db.vaultDao().getAllEntriesSync())
     }
 
+    @Test fun `unreadable 2FA secret imports into notes so the entry stays editable`() = runTest {
+        repository.saveEntry(VaultEntry(title = "Mail", password = "secret", notes = "work account"))
+        repository.saveEntry(VaultEntry(title = "Bank", password = "secret", totpSecret = "JBSWY3DP"))
+        val backup = repository.createEncryptedBackupPayload(password())
+        val root = JSONObject(String(BackupEnvelope.decrypt(backup, password()), Charsets.UTF_8))
+        val items = root.getJSONArray("items")
+        for (i in 0 until items.length()) {
+            val item = items.getJSONObject(i)
+            if (item.getString("title") == "Mail") item.put("totpSecret", "MZ")
+        }
+        val edited = BackupEnvelope.encrypt(root.toString().toByteArray(), password())
+        db.vaultDao().deleteAllEntries()
+        SessionManager.setKey(destinationKey)
+
+        assertEquals(2, repository.restoreEncryptedBackupPayload(edited, password()))
+        val restored = repository.getAllEntries().first().associateBy { it.title }
+        val mail = restored.getValue("Mail")
+        assertEquals("", mail.totpSecret)
+        assertEquals("work account\n\n${INVALID_TOTP_NOTE_PREFIX}MZ", mail.notes)
+        assertEquals("JBSWY3DP", restored.getValue("Bank").totpSecret)
+        assertEquals(0, repository.restoreEncryptedBackupPayload(edited, password()))
+    }
+
     @Test fun `legacy backup requires explicit mode and original key`() = runTest {
         repository.saveEntry(VaultEntry(title = "Old backup", password = "secret"))
         val portable = repository.createEncryptedBackupPayload(password())

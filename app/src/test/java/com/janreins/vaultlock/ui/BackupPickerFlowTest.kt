@@ -4,6 +4,7 @@ import android.app.Application
 import android.content.Context
 import android.net.Uri
 import androidx.lifecycle.ViewModelStore
+import androidx.lifecycle.viewModelScope
 import androidx.test.core.app.ApplicationProvider
 import com.janreins.vaultlock.crypto.SessionManager
 import com.janreins.vaultlock.data.SecurityPreferences
@@ -14,6 +15,7 @@ import javax.crypto.spec.SecretKeySpec
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.job
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.TestScope
@@ -87,14 +89,20 @@ class BackupPickerFlowTest {
         store = ViewModelStore().apply { put("vault", viewModel) }
     }
 
-    /** Ends each test with the ViewModel cleared so no auto-lock/expiry loop keeps the test scheduler busy. */
+    /**
+     * Ends each test with the ViewModel cleared so no auto-lock/expiry loop keeps the test scheduler busy,
+     * then waits for its cancelled jobs to finish. Backup crypto runs on real IO threads and resumes on
+     * Main when done; if that outlives the test it touches Dispatchers.Main while the next test's
+     * setMain/resetMain is swapping it, which fails unrelated tests.
+     */
     private fun vmTest(body: suspend TestScope.() -> Unit) = runTest {
+        val vmJob = viewModel.viewModelScope.coroutineContext.job
         try {
             body()
         } finally {
             store.clear()
             SessionManager.lock()
-            runCurrent()
+            awaitState { vmJob.isCompleted }
         }
     }
 

@@ -21,10 +21,10 @@ VaultLock uses local encryption to protect credentials stored on-device:
 
 - **2FA Authenticator (TOTP):** Raw Base32 secrets and `otpauth://totp` URIs (RFC 6238), with SHA1/SHA256/SHA512, 6–8 digits, custom periods (15–120 seconds), and live countdowns.
 - **Duplicate Password Warnings:** In-app visual warnings flagging entries reusing passwords across different services.
-- **Encrypted Exports:** Save an encrypted file directly through Android's document picker. Imports are limited to 16 MiB and add entries to the current vault.
+- **Encrypted Exports:** Save an encrypted file directly through Android's document picker. Imports are limited to 16 MiB and add entries to the current vault. A 2FA secret the app can't read is moved into that entry's notes so the entry can still be edited.
 - **Biometric Authentication:** Hardware-backed fingerprint / face unlock.
 - **Auto-Lock Timer:** Automatic locking on inactivity or app backgrounding.
-- **Clipboard Masking:** Sensitive clip data flags (Android 13+) with clipboard clearing after 10 seconds (backed by a system alarm, so it still happens if Android closes the app; it may run a little late while the phone is idle) and on vault lock, while preserving clips copied by other apps.
+- **Clipboard Masking:** Copies are flagged as sensitive on every Android version, so keyboards and clipboard previews hide them, with clipboard clearing after 10 seconds (backed by a system alarm, so it still happens if Android closes the app; it may run a little late while the phone is idle) and on vault lock. A clip copied later by another app is kept whenever Android lets VaultLock see it; on Android 10 and newer, VaultLock can't see the clipboard from the background, so something copied in another app within those 10 seconds may also be cleared.
 
 ---
 
