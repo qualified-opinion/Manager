@@ -4,7 +4,7 @@ import android.content.ContentResolver
 import android.net.Uri
 import android.provider.DocumentsContract
 
-/** Ciphertext-only document access. All calls run on Dispatchers.IO. */
+/** Ciphertext-only document access. All calls run on the ViewModel's IO dispatcher. */
 interface BackupDocumentStore {
     fun write(uri: Uri, bytes: ByteArray)
     fun delete(uri: Uri): Boolean
