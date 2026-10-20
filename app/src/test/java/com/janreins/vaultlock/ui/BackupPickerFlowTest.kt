@@ -85,15 +85,15 @@ class BackupPickerFlowTest {
         SessionManager.setKey(SecretKeySpec(ByteArray(32) { 1 }, "AES"))
         documents = FakeDocumentStore()
         viewModel = VaultViewModel(application, SecurityPreferences(application, customPrefs = prefs),
-            dispatcher, elapsedRealtime = { elapsed }, backupDocumentStore = documents)
+            dispatcher, elapsedRealtime = { elapsed }, backupDocumentStore = documents, ioDispatcher = dispatcher)
         store = ViewModelStore().apply { put("vault", viewModel) }
     }
 
     /**
      * Ends each test with the ViewModel cleared so no auto-lock/expiry loop keeps the test scheduler busy,
-     * then waits for its cancelled jobs to finish. Backup crypto runs on real IO threads and resumes on
-     * Main when done; if that outlives the test it touches Dispatchers.Main while the next test's
-     * setMain/resetMain is swapping it, which fails unrelated tests.
+     * then waits for its cancelled jobs to finish. Backup document IO runs on the test dispatcher, but
+     * database work still runs on real threads and resumes on Main; if that outlives the test it touches
+     * Dispatchers.Main while the next test's setMain/resetMain is swapping it, which fails unrelated tests.
      */
     private fun vmTest(body: suspend TestScope.() -> Unit) = runTest {
         val vmJob = viewModel.viewModelScope.coroutineContext.job
@@ -124,7 +124,7 @@ class BackupPickerFlowTest {
     }
 
     /**
-     * Pump Main while real IO finishes; never advance the repeating inactivity timer.
+     * Pump Main while database work on real threads finishes; never advance the repeating inactivity timer.
      * The deadline is generous because shared CI runners can be slow and busy with PBKDF2 work from
      * earlier tests; it only costs time when a test is genuinely stuck.
      */

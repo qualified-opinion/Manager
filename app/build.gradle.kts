@@ -56,7 +56,21 @@ android {
     compose = true
     buildConfig = true
   }
-  testOptions { unitTests { isIncludeAndroidResources = true } }
+  testOptions {
+    unitTests {
+      isIncludeAndroidResources = true
+      all {
+        // Robolectric, Compose and screenshot tests share one JVM; Gradle's 512 MB default starves it on CI
+        // runners and stalls tests past their 60 s limits.
+        it.maxHeapSize = "2g"
+        // Print the full failure in the CI log; the HTML report is only an artifact.
+        it.testLogging {
+          events("failed")
+          exceptionFormat = org.gradle.api.tasks.testing.logging.TestExceptionFormat.FULL
+        }
+      }
+    }
+  }
   dependenciesInfo {
     includeInApk = false
     includeInBundle = true
