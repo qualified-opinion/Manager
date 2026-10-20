@@ -53,14 +53,7 @@ jobs:
 
       - name: Check APK stays offline
         shell: bash
-        run: |
-          for apk in app/build/outputs/apk/debug/*.apk app/build/outputs/apk/release/*.apk; do
-            permissions_output=$("$ANDROID_HOME/build-tools/36.0.0/aapt" dump permissions "$apk")
-            if rg -q 'android.permission.(INTERNET|ACCESS_NETWORK_STATE)' <<< "$permissions_output"; then
-              echo "Offline policy violated: network permission in packaged APK"
-              exit 1
-            fi
-          done
+        run: .github/scripts/check-apk-offline.sh app/build/outputs/apk/debug/*.apk app/build/outputs/apk/release/*.apk
 
       - name: Upload reports
         if: always()
@@ -123,6 +116,7 @@ jobs:
           printf '%s' "$RELEASE_KEYSTORE_BASE64" | base64 --decode > "$KEYSTORE_PATH"
           ./gradlew assembleRelease --stacktrace
           "$ANDROID_HOME/build-tools/36.0.0/apksigner" verify --verbose app/build/outputs/apk/release/app-release.apk
+          .github/scripts/check-apk-offline.sh app/build/outputs/apk/release/app-release.apk
           mkdir -p release
           cp app/build/outputs/apk/release/app-release.apk release/VaultLock.apk
           cd release

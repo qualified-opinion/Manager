@@ -69,7 +69,9 @@ class VaultViewModel @JvmOverloads constructor(
     private val kdfDispatcher: CoroutineDispatcher = Dispatchers.Default,
     private val elapsedRealtime: () -> Long = { SystemClock.elapsedRealtime() },
     private val backupDocumentStore: BackupDocumentStore =
-        ContentResolverBackupDocumentStore(application.contentResolver)
+        ContentResolverBackupDocumentStore(application.contentResolver),
+    /** Dispatcher for backup document reads, writes and deletes; injectable for tests. */
+    private val ioDispatcher: CoroutineDispatcher = Dispatchers.IO
 ) : AndroidViewModel(application) {
 
     private val securityPreferences = customSecurityPreferences ?: SecurityPreferences(application)
@@ -892,7 +894,7 @@ class VaultViewModel @JvmOverloads constructor(
         _uiState.update { it.copy(isBackupBusy = true) }
         viewModelScope.launch(start = CoroutineStart.UNDISPATCHED) {
             try {
-                val message = withContext(Dispatchers.IO) {
+                val message = withContext(ioDispatcher) {
                     if (bytes == null) {
                         if (deleteBackupDocument(uri)) {
                             "Backup was not saved: the encrypted data was lost. Unlock and export again."
@@ -936,7 +938,7 @@ class VaultViewModel @JvmOverloads constructor(
             var readBytes: ByteArray? = null
             try {
                 // Read encrypted bytes only. Decryption requires explicit confirmation after unlock.
-                val bytes = withContext(Dispatchers.IO) {
+                val bytes = withContext(ioDispatcher) {
                     backupDocumentStore.read(uri).also { readBytes = it }
                 }
                 if (generation != backupGeneration) return@launch
