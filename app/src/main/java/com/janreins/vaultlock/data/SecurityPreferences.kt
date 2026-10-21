@@ -285,7 +285,10 @@ class SecurityPreferences(
 
     /**
      * Time left on the current lockout. Changing the phone's clock has no effect. After a restart
-     * the uptime clock starts again from zero, so the full delay is applied again from now.
+     * the uptime clock starts again from zero, so an unfinished lockout applies the full delay again
+     * from now. A lockout seen to run out is cleared (the failed-attempt count stays, so the next
+     * wrong guess still escalates) and a later restart doesn't bring it back. If the phone restarts
+     * before the app ever saw the lockout run out, the full delay still applies once.
      */
     fun getLockoutRemainingMillis(): Long {
         val delayMs = prefs.getLong(KEY_LOCKOUT_DELAY_MS, 0L)
@@ -303,7 +306,15 @@ class SecurityPreferences(
                 .commit()
             return delayMs
         }
-        return (startedAt + delayMs - now).coerceIn(0L, delayMs)
+        val remaining = (startedAt + delayMs - now).coerceIn(0L, delayMs)
+        if (remaining == 0L) {
+            prefs.edit()
+                .remove(KEY_LOCKOUT_STARTED_ELAPSED)
+                .remove(KEY_LOCKOUT_DELAY_MS)
+                .remove(KEY_LOCKOUT_BOOT_COUNT)
+                .commit()
+        }
+        return remaining
     }
 
     fun calculateBackoffDelaySeconds(attempts: Int): Long {
