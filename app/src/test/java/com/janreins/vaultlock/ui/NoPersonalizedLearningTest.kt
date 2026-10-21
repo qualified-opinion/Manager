@@ -1,6 +1,7 @@
 package com.janreins.vaultlock.ui
 
 import android.app.Application
+import android.content.Context
 import android.view.inputmethod.EditorInfo
 import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.platform.InterceptPlatformTextInput
@@ -13,6 +14,7 @@ import androidx.compose.ui.test.performSemanticsAction
 import androidx.lifecycle.ViewModelStore
 import androidx.test.core.app.ApplicationProvider
 import com.janreins.vaultlock.crypto.SessionManager
+import com.janreins.vaultlock.data.SecurityPreferences
 import com.janreins.vaultlock.ui.screens.AddEditEntryScreen
 import org.junit.After
 import org.junit.Assert.assertEquals
@@ -43,7 +45,11 @@ class NoPersonalizedLearningTest {
     @Before
     fun setUp() {
         SessionManager.lock()
-        val viewModel = VaultViewModel(ApplicationProvider.getApplicationContext<Application>())
+        val application = ApplicationProvider.getApplicationContext<Application>()
+        val prefs = application.getSharedPreferences("no_personalized_learning_test", Context.MODE_PRIVATE)
+        prefs.edit().clear().commit()
+        // Plain prefs: Robolectric has no AndroidKeyStore for the default encrypted ones.
+        val viewModel = VaultViewModel(application, SecurityPreferences(application, customPrefs = prefs))
         store = ViewModelStore().apply { put("vault", viewModel) }
         composeRule.setContent {
             InterceptPlatformTextInput(recorder) {
@@ -54,7 +60,7 @@ class NoPersonalizedLearningTest {
 
     @After
     fun tearDown() {
-        store.clear()
+        if (::store.isInitialized) store.clear()
         SessionManager.lock()
     }
 
