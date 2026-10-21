@@ -112,6 +112,51 @@ class LockLifecycleTest {
         assertFalse(SessionManager.hasKey())
     }
 
+    /** Moves the last recorded activity into the past, since the idle check reads the wall clock. */
+    private fun setIdleFor(millis: Long) {
+        SessionManager::class.java.getDeclaredField("lastActiveTimestamp").apply { isAccessible = true }
+            .setLong(SessionManager, System.currentTimeMillis() - millis)
+    }
+
+    @Test
+    fun `timeout 0 locks after thirty seconds idle`() = vmTest {
+        runCurrent()
+        viewModel.setAutoLockDuration(0)
+        setIdleFor(VaultViewModel.IMMEDIATE_IDLE_TIMEOUT_MS - 10_000)
+        advanceTimeBy(5_001)
+        runCurrent()
+        assertTrue(viewModel.uiState.value.isUnlocked)
+        setIdleFor(VaultViewModel.IMMEDIATE_IDLE_TIMEOUT_MS)
+        advanceTimeBy(5_001)
+        runCurrent()
+        assertFalse(viewModel.uiState.value.isUnlocked)
+        assertFalse(SessionManager.hasKey())
+    }
+
+    @Test
+    fun `timeout 0 locks on foreground after thirty seconds idle`() = vmTest {
+        runCurrent()
+        viewModel.setAutoLockDuration(0)
+        setIdleFor(VaultViewModel.IMMEDIATE_IDLE_TIMEOUT_MS - 10_000)
+        viewModel.onAppForegrounded()
+        assertTrue(viewModel.uiState.value.isUnlocked)
+        setIdleFor(VaultViewModel.IMMEDIATE_IDLE_TIMEOUT_MS)
+        viewModel.onAppForegrounded()
+        assertFalse(viewModel.uiState.value.isUnlocked)
+        assertFalse(SessionManager.hasKey())
+    }
+
+    @Test
+    fun `timeout 120 does not lock after thirty seconds idle`() = vmTest {
+        runCurrent()
+        viewModel.setAutoLockDuration(120)
+        setIdleFor(VaultViewModel.IMMEDIATE_IDLE_TIMEOUT_MS + 10_000)
+        advanceTimeBy(5_001)
+        runCurrent()
+        viewModel.onAppForegrounded()
+        assertTrue(viewModel.uiState.value.isUnlocked)
+    }
+
     @Test
     fun `stop during an open export picker locks and completion writes ciphertext while locked`() = vmTest {
         runCurrent()
