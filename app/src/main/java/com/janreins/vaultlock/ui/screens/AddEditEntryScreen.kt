@@ -69,6 +69,7 @@ import com.janreins.vaultlock.data.VaultEntry
 import com.janreins.vaultlock.generator.PasswordGenerator
 import com.janreins.vaultlock.ui.VaultViewModel
 import com.janreins.vaultlock.ui.EntryValidation
+import com.janreins.vaultlock.ui.NoPersonalizedLearning
 import com.janreins.vaultlock.ui.theme.Amber400
 import com.janreins.vaultlock.ui.theme.Amber500
 import com.janreins.vaultlock.ui.theme.RedError
@@ -249,22 +250,24 @@ fun AddEditEntryScreen(
                     Spacer(modifier = Modifier.height(14.dp))
 
                     // Username / Email Field
-                    OutlinedTextField(
-                        value = username,
-                        onValueChange = { viewModel.onUserActivity(); username = it },
-                        label = { Text("Username / Email / User ID") },
-                        leadingIcon = {
-                            Icon(Icons.Default.Person, null, tint = Amber400)
-                        },
-                        singleLine = true,
-                        colors = OutlinedTextFieldDefaults.colors(
-                            focusedBorderColor = Amber400,
-                            unfocusedBorderColor = MaterialTheme.colorScheme.outline
-                        ),
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .testTag("entry_input_username")
-                    )
+                    NoPersonalizedLearning {
+                        OutlinedTextField(
+                            value = username,
+                            onValueChange = { viewModel.onUserActivity(); username = it },
+                            label = { Text("Username / Email / User ID") },
+                            leadingIcon = {
+                                Icon(Icons.Default.Person, null, tint = Amber400)
+                            },
+                            singleLine = true,
+                            colors = OutlinedTextFieldDefaults.colors(
+                                focusedBorderColor = Amber400,
+                                unfocusedBorderColor = MaterialTheme.colorScheme.outline
+                            ),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .testTag("entry_input_username")
+                        )
+                    }
 
                     Spacer(modifier = Modifier.height(14.dp))
 
@@ -376,44 +379,48 @@ fun AddEditEntryScreen(
                     Spacer(modifier = Modifier.height(14.dp))
 
                     // Website URL Field
-                    OutlinedTextField(
-                        value = url,
-                        onValueChange = { viewModel.onUserActivity(); url = it },
-                        label = { Text("Website Address (Optional)") },
-                        leadingIcon = {
-                            Icon(Icons.Default.Language, null, tint = Amber400)
-                        },
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Uri),
-                        singleLine = true,
-                        colors = OutlinedTextFieldDefaults.colors(
-                            focusedBorderColor = Amber400,
-                            unfocusedBorderColor = MaterialTheme.colorScheme.outline
-                        ),
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .testTag("entry_input_url")
-                    )
+                    NoPersonalizedLearning {
+                        OutlinedTextField(
+                            value = url,
+                            onValueChange = { viewModel.onUserActivity(); url = it },
+                            label = { Text("Website Address (Optional)") },
+                            leadingIcon = {
+                                Icon(Icons.Default.Language, null, tint = Amber400)
+                            },
+                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Uri),
+                            singleLine = true,
+                            colors = OutlinedTextFieldDefaults.colors(
+                                focusedBorderColor = Amber400,
+                                unfocusedBorderColor = MaterialTheme.colorScheme.outline
+                            ),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .testTag("entry_input_url")
+                        )
+                    }
 
                     Spacer(modifier = Modifier.height(14.dp))
 
                     // Notes / Extra Details Field
-                    OutlinedTextField(
-                        value = notes,
-                        onValueChange = { viewModel.onUserActivity(); notes = it },
-                        label = { Text("Encrypted Notes / Security Questions") },
-                        leadingIcon = {
-                            Icon(Icons.Default.Description, null, tint = Amber400)
-                        },
-                        minLines = 3,
-                        maxLines = 6,
-                        colors = OutlinedTextFieldDefaults.colors(
-                            focusedBorderColor = Amber400,
-                            unfocusedBorderColor = MaterialTheme.colorScheme.outline
-                        ),
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .testTag("entry_input_notes")
-                    )
+                    NoPersonalizedLearning {
+                        OutlinedTextField(
+                            value = notes,
+                            onValueChange = { viewModel.onUserActivity(); notes = it },
+                            label = { Text("Encrypted Notes / Security Questions") },
+                            leadingIcon = {
+                                Icon(Icons.Default.Description, null, tint = Amber400)
+                            },
+                            minLines = 3,
+                            maxLines = 6,
+                            colors = OutlinedTextFieldDefaults.colors(
+                                focusedBorderColor = Amber400,
+                                unfocusedBorderColor = MaterialTheme.colorScheme.outline
+                            ),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .testTag("entry_input_notes")
+                        )
+                    }
                 }
             }
 
