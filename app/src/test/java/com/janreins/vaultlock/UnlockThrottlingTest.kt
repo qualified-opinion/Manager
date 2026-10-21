@@ -104,6 +104,31 @@ class UnlockThrottlingTest {
     }
 
     @Test
+    fun `a lockout that already ran out does not come back after a reboot`() {
+        var uptime = 50_000L
+        var boot = 7
+        val prefs = application.getSharedPreferences("test_throttling_expired", Context.MODE_PRIVATE)
+        prefs.edit().clear().commit()
+        val clocked = SecurityPreferences(application, prefs, elapsedRealtime = { uptime }, bootCount = { boot })
+
+        repeat(6) { clocked.recordFailedUnlockAttempt() }
+        assertEquals(32_000L, clocked.getLockoutRemainingMillis())
+        uptime += 40_000
+        assertEquals(0L, clocked.getLockoutRemainingMillis())
+
+        // Restart days later: nothing left to wait for.
+        boot = 8
+        uptime = 1_000L
+        assertEquals(0L, clocked.getLockoutRemainingMillis())
+        assertEquals(6, clocked.getFailedUnlockAttempts())
+
+        // The next wrong guess still escalates from the kept counter.
+        assertEquals(60L, clocked.recordFailedUnlockAttempt())
+        assertEquals(7, clocked.getFailedUnlockAttempts())
+        assertEquals(60_000L, clocked.getLockoutRemainingMillis())
+    }
+
+    @Test
     fun `resetFailedUnlockAttempts clears failure counter and lockout timestamp`() {
         securityPreferences.recordFailedUnlockAttempt()
         securityPreferences.recordFailedUnlockAttempt()
