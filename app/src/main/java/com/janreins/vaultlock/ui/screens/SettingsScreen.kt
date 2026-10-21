@@ -249,7 +249,7 @@ fun SettingsScreen(
 
                     // Auto-Lock Duration
                     val lockLabel = when (uiState.autoLockSeconds) {
-                        0L -> "Immediately on background"
+                        0L -> "Immediately on leaving the app, or after 30 seconds idle"
                         60L -> "1 minute of inactivity"
                         120L -> "2 minutes of inactivity (Recommended)"
                         300L -> "5 minutes of inactivity"
@@ -610,7 +610,7 @@ fun AutoLockPickerDialog(
     onSelect: (Long) -> Unit
 ) {
     val options = listOf(
-        0L to "Immediately when app is backgrounded",
+        0L to "Immediately on leaving the app, or after 30 seconds idle",
         60L to "1 minute of inactivity",
         120L to "2 minutes of inactivity (Default)",
         300L to "5 minutes of inactivity"

@@ -93,6 +93,7 @@ class VaultViewModel @JvmOverloads constructor(
 
     companion object {
         const val CONFIG_CHANGE_GRACE_MS = 5_000L
+        const val IMMEDIATE_IDLE_TIMEOUT_MS = 30_000L
         const val PENDING_IMPORT_TTL_MS = 600_000L
         const val CLIPBOARD_CLEAR_MS = 10_000L
         /** Value of ClipDescription.EXTRA_IS_SENSITIVE, which only exists as a constant from API 33. */
@@ -189,16 +190,20 @@ class VaultViewModel @JvmOverloads constructor(
         autoLockJob = viewModelScope.launch {
             while (true) {
                 delay(5000) // Check every 5 seconds
-                val timeoutMillis = _uiState.value.autoLockSeconds * 1000L
-                if (timeoutMillis > 0) {
-                    val idle = System.currentTimeMillis() - SessionManager.getLastActivity()
-                    if (idle >= timeoutMillis) {
-                        lockVault()
-                        break
-                    }
+                val timeoutMillis = idleTimeoutMillis()
+                val idle = System.currentTimeMillis() - SessionManager.getLastActivity()
+                if (idle >= timeoutMillis) {
+                    lockVault()
+                    break
                 }
             }
         }
+    }
+
+    // The "Immediately" setting (0) also locks after a short idle time, so it is never weaker than a timed setting.
+    private fun idleTimeoutMillis(): Long {
+        val seconds = _uiState.value.autoLockSeconds
+        return if (seconds > 0) seconds * 1000L else IMMEDIATE_IDLE_TIMEOUT_MS
     }
 
     private fun stopInactivityTimer() {
@@ -244,12 +249,10 @@ class VaultViewModel @JvmOverloads constructor(
         configChangeGuardJob?.cancel()
         configChangeGuardJob = null
         if (_uiState.value.isUnlocked) {
-            val timeoutMillis = _uiState.value.autoLockSeconds * 1000L
-            if (timeoutMillis > 0) {
-                val idle = System.currentTimeMillis() - SessionManager.getLastActivity()
-                if (idle >= timeoutMillis) {
-                    lockVault()
-                }
+            val timeoutMillis = idleTimeoutMillis()
+            val idle = System.currentTimeMillis() - SessionManager.getLastActivity()
+            if (idle >= timeoutMillis) {
+                lockVault()
             }
         }
     }
