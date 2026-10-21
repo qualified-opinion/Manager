@@ -172,4 +172,19 @@ class VaultClipboardTest {
         runCurrent()
         assertNotNull(alarms.nextScheduledAlarm)
     }
+
+    @Test
+    fun `clearing the view model keeps the clip and the alarm wipes it later`() = runTest {
+        runCurrent()
+        viewModel.copyToClipboard(application, "secret")
+        // Back on Android 8-11 finishes the activity and clears the ViewModel.
+        store.clear()
+        assertEquals("secret", clipboard.primaryClip?.getItemAt(0)?.text?.toString())
+        val intent = scheduledWipeIntent()
+        // The in-process timer is gone, so only the alarm can clear the copy.
+        shadowOf(Looper.getMainLooper()).idleFor(Duration.ofSeconds(10))
+        assertEquals("secret", clipboard.primaryClip?.getItemAt(0)?.text?.toString())
+        assertTrue(ClipboardWipe.onAlarm(application, intent))
+        assertNotEquals("secret", clipboard.primaryClip?.getItemAt(0)?.text?.toString())
+    }
 }

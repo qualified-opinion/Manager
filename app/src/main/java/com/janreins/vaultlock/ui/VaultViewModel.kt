@@ -766,7 +766,10 @@ class VaultViewModel @JvmOverloads constructor(
     override fun onCleared() {
         clearPendingBackups()
         clearEntryDrafts()
-        clearOwnedClipboard()
+        // Keep the copy for pasting elsewhere: on Android 8-11 Back finishes the activity, and a
+        // wipe here would also run blind. The ClipboardWipe alarm still clears it if it is ours.
+        clipboardClearRunnable?.let { clipboardClearHandler.removeCallbacks(it) }
+        clipboardClearRunnable = null
         super.onCleared()
     }
 
