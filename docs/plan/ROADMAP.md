@@ -17,9 +17,9 @@ Done work before this roadmap (summary): Phase 1 review fixes F-01 to F-23 lande
 | Claude plan 5 | (merged) | N-4 keep copied password when Back clears the ViewModel | Merged #36, `188c6f8` | - |
 | Claude plan 6 | (merged) | N-5 no keyboard learning in username, URL, notes | Merged #37, `1cc7fcd` | - |
 | Claude plan 7 | (merged) | N-6 don't repeat a finished lockout after restart | Merged #38, `e1f18bd` | - |
-| Docs | `docs/plan-roadmap` | This roadmap, reviews, packs, AGENTS.md, CLAUDE.md | In review | - |
+| Docs | `docs/plan-roadmap` | This roadmap, reviews, packs, AGENTS.md, CLAUDE.md | Merged #39, `11401ed` | - |
 | Release v1.2.0 | (no branch) | Signed APK of everything since v1.1.0; Jan publishes | After B1 and B2 merge, then Jan's phone checks | - |
-| B1 | `fix/ci-docs-housekeeping` | N-10, K-3, offline-check fixtures (issue #32) | Planned | [batch1](handoffs/batch1-ci-docs-housekeeping.md) |
+| B1 | `fix/ci-docs-housekeeping` | N-10, K-3, offline-check fixtures (issue #32) | In review, PR #40 | [batch1](handoffs/batch1-ci-docs-housekeeping.md) |
 | B2 | `fix/clipboard-wipe-reliability` | K-1, K-2 clipboard wipe | Planned | [batch2](handoffs/batch2-clipboard-wipe.md) |
 | B3 | `fix/generator-honest-strength` | F-19, F-20 (issue #31, part 1) | Outline | - |
 | B4 | `feat/passphrase-engine` | Passphrase engine plus bundled wordlist (issue #31, part 2) | Outline | - |

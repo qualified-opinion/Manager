@@ -1,3 +1,4 @@
+Historical note from 9 Oct 2026; see [docs/plan/ROADMAP.md](docs/plan/ROADMAP.md) for current status.
 # VaultLock review and repair status — 2026-10-09
 
 Starting point: `fb8514ecb40db0488e63d1c72e9509b79a78b2d0`.
