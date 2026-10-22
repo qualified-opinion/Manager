@@ -116,6 +116,8 @@ class VaultViewModel @JvmOverloads constructor(
     private var ownedClipTimestamp: Long? = null
 
     init {
+        ClipboardWipe.recoverOnForeground(application)
+
         // Check for existing unlock lockout on initialization
         if (securityPreferences.getLockoutRemainingMillis() > 0) {
             startLockoutCountdown()
@@ -246,6 +248,7 @@ class VaultViewModel @JvmOverloads constructor(
     }
 
     fun onAppForegrounded() {
+        ClipboardWipe.recoverOnForeground(getApplication())
         configChangeGuardJob?.cancel()
         configChangeGuardJob = null
         if (_uiState.value.isUnlocked) {
@@ -255,6 +258,10 @@ class VaultViewModel @JvmOverloads constructor(
                 lockVault()
             }
         }
+    }
+
+    fun onWindowFocused() {
+        ClipboardWipe.recoverOnForeground(getApplication())
     }
 
     /**
@@ -777,28 +784,26 @@ class VaultViewModel @JvmOverloads constructor(
         clipboardClearRunnable?.let { clipboardClearHandler.removeCallbacks(it) }
         clipboardClearRunnable = null
         try {
-            ClipboardWipe.cancel(getApplication())
-        } catch (_: Exception) {
-            // A leftover alarm only clears a clip that is still ours.
-        }
-        try {
-            val clipboard = ownedClipboard
-            val marker = ownedClipLabel
-            val description = clipboard?.primaryClipDescription
+            val clipboard = ownedClipboard ?: return
+            val marker = ownedClipLabel ?: return
+            val pending = ClipboardWipe.pending(getApplication()) ?: return
+            if (pending.marker != marker) return
+            val description = clipboard.primaryClipDescription
             val timestamp = ownedClipTimestamp
             // Android 10+ hides the clipboard from background apps (description == null). Clear anyway
             // then, because a stale copied secret is worse than dropping a newer clip.
             val stillOurs = description == null || (description.label?.toString() == marker &&
                 (timestamp == null || (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O && description.timestamp == timestamp)))
-            if (clipboard != null && marker != null && stillOurs) {
+            if (stillOurs) {
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
                     clipboard.clearPrimaryClip()
                 } else {
                     clipboard.setPrimaryClip(ClipData.newPlainText("", ""))
                 }
             }
+            ClipboardWipe.complete(getApplication(), pending)
         } catch (_: Exception) {
-            // Clipboard access may be denied while the app is in the background.
+            // Keep the alarm and pending record if clipboard access fails.
         } finally {
             ownedClipboard = null
             ownedClipLabel = null

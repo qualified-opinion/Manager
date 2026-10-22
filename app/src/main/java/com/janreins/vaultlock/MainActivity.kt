@@ -71,4 +71,11 @@ class MainActivity : FragmentActivity() {
         super.onStart()
         viewModel.onAppForegrounded()
     }
+
+    override fun onWindowFocusChanged(hasFocus: Boolean) {
+        super.onWindowFocusChanged(hasFocus)
+        if (hasFocus) {
+            viewModel.onWindowFocused()
+        }
+    }
 }
