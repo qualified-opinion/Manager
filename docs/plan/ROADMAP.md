@@ -18,7 +18,7 @@ Done work before this roadmap (summary): Phase 1 review fixes F-01 to F-23 lande
 | Claude plan 6 | (merged) | N-5 no keyboard learning in username, URL, notes | Merged #37, `1cc7fcd` | - |
 | Claude plan 7 | (merged) | N-6 don't repeat a finished lockout after restart | Merged #38, `e1f18bd` | - |
 | Docs | `docs/plan-roadmap` | This roadmap, reviews, packs, AGENTS.md, CLAUDE.md | In review | - |
-| Release v1.2.0 | (no branch) | Signed APK of everything since v1.1.0; Jan publishes | Waiting on D1 and phone checks | - |
+| Release v1.2.0 | (no branch) | Signed APK of everything since v1.1.0; Jan publishes | After B1 and B2 merge, then Jan's phone checks | - |
 | B1 | `fix/ci-docs-housekeeping` | N-10, K-3, offline-check fixtures (issue #32) | Planned | [batch1](handoffs/batch1-ci-docs-housekeeping.md) |
 | B2 | `fix/clipboard-wipe-reliability` | K-1, K-2 clipboard wipe | Planned | [batch2](handoffs/batch2-clipboard-wipe.md) |
 | B3 | `fix/generator-honest-strength` | F-19, F-20 (issue #31, part 1) | Outline | - |
@@ -48,7 +48,7 @@ Old ids are kept. F-ids are from `REVIEW-2026-10.md`, N-ids from [the Claude rev
 | Passphrase mode | P2 | No passphrase generator | B4, B5 |
 
 ## Decisions Jan still owes (each has a default)
-- **D1. When to cut v1.2.0.** Default: after B1 and B2 merge, because K-2 is reachable through #36, which is not released yet. Alternative: release `e1f18bd` now and ship B2 in v1.2.1.
+- **D1. When to cut v1.2.0.** Decided by Jan on 22 Oct 2026: no release until K-1, K-2 and K-3 are fixed, so v1.2.0 comes after B1 and B2 merge.
 - **D2. Passphrase defaults.** Default: EFF large wordlist, 6 words, `-` separator, no forced digit or capital. Jan can change these in B5 review.
 - **D3. Google Play.** Default: no; APK sideload only, so N-9 and issue #33 stay cut.
 - **D4. Protected batches B6 and B7.** Each needs Jan's explicit go for that batch before work starts. Default: run them last, one at a time.
