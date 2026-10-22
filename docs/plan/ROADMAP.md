@@ -20,7 +20,7 @@ Done work before this roadmap (summary): Phase 1 review fixes F-01 to F-23 lande
 | Docs | `docs/plan-roadmap` | This roadmap, reviews, packs, AGENTS.md, CLAUDE.md | Merged #39, `11401ed` | - |
 | Release v1.2.0 | (no branch) | Signed APK of everything since v1.1.0; Jan publishes | After B1 and B2 merge, then Jan's phone checks | - |
 | B1 | `fix/ci-docs-housekeeping` | N-10, K-3, offline-check fixtures (issue #32) | Merged #40, `319cc93` | [batch1](handoffs/batch1-ci-docs-housekeeping.md) |
-| B2 | `fix/clipboard-wipe-reliability` | K-1, K-2 clipboard wipe | In review, PR #TBD | [batch2](handoffs/batch2-clipboard-wipe.md) |
+| B2 | `fix/clipboard-wipe-reliability` | K-1, K-2 clipboard wipe | In review, PR #41 | [batch2](handoffs/batch2-clipboard-wipe.md) |
 | B3 | `fix/generator-honest-strength` | F-19, F-20 (issue #31, part 1) | Outline | - |
 | B4 | `feat/passphrase-engine` | Passphrase engine plus bundled wordlist (issue #31, part 2) | Outline | - |
 | B5 | `feat/passphrase-ui` | Passphrase UI and generator state (issue #31, part 3) | Outline | - |

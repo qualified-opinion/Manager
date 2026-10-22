@@ -247,13 +247,20 @@ class VaultClipboardTest {
     }
 
     @Test
-    fun `late hidden alarm is recovered on next foreground`() = vmTest {
+    fun `late hidden alarm is recovered when foreground window gains focus`() = vmTest {
         runCurrent()
         viewModel.copyToClipboard(application, "secret")
         viewModel.onAppBackgrounded()
         deliverLateHiddenAlarm()
+        clipboardShadow.ownershipHidden = true
         assertEquals("secret", clipboard.primaryClip?.getItemAt(0)?.text?.toString())
+        val record = wipePrefs.all.toMap()
+        assertFalse(record.isEmpty())
         viewModel.onAppForegrounded()
+        assertEquals("secret", clipboard.primaryClip?.getItemAt(0)?.text?.toString())
+        assertEquals(record, wipePrefs.all)
+        clipboardShadow.ownershipHidden = false
+        viewModel.onWindowFocused()
         assertNotEquals("secret", clipboard.primaryClip?.getItemAt(0)?.text?.toString())
         assertTrue(wipePrefs.all.isEmpty())
         assertEquals(null, alarms.peekNextScheduledAlarm())

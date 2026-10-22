@@ -260,6 +260,10 @@ class VaultViewModel @JvmOverloads constructor(
         }
     }
 
+    fun onWindowFocused() {
+        ClipboardWipe.recoverOnForeground(getApplication())
+    }
+
     /**
      * Initializes the Master Password for the first time.
      */
